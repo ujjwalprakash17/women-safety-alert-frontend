@@ -7,12 +7,17 @@ import { supabase } from "@/lib/supabaseClient";
 import ShieldIcon from "@/components/ShieldIcon";
 import PageLoading from "@/components/PageLoading";
 
-type Status = "checking" | "idle" | "redirecting";
+type Status = "checking" | "idle" | "redirecting" | "submitting";
+type Mode = "signin" | "signup" | "forgot";
 
 export default function LoginPage() {
   const router = useRouter();
   const [status, setStatus] = useState<Status>("checking");
+  const [mode, setMode] = useState<Mode>("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -46,6 +51,54 @@ export default function LoginPage() {
     }
   }
 
+  async function handleEmailSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setNotice(null);
+    setStatus("submitting");
+
+    if (mode === "signin") {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setError(error.message);
+        setStatus("idle");
+      }
+      // On success, the auth-state listener above redirects to /dashboard.
+    } else if (mode === "signup") {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/login` },
+      });
+      if (error) {
+        setError(error.message);
+        setStatus("idle");
+      } else if (!data.session) {
+        // Email confirmation is required before a session is issued.
+        setNotice("Account created — check your email to confirm it before signing in.");
+        setStatus("idle");
+      }
+      // If a session came back immediately (confirmation disabled), the
+      // listener above handles the redirect.
+    } else {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      setStatus("idle");
+      if (error) {
+        setError(error.message);
+      } else {
+        setNotice("If that email has an account, a reset link has been sent.");
+      }
+    }
+  }
+
+  function switchMode(next: Mode) {
+    setMode(next);
+    setError(null);
+    setNotice(null);
+  }
+
   if (status === "checking") return <PageLoading />;
 
   return (
@@ -56,20 +109,82 @@ export default function LoginPage() {
         </span>
         <div>
           <h1>Women Safety SOS</h1>
-          <p>Sign in to continue.</p>
+          <p>
+            {mode === "signin" && "Sign in to continue."}
+            {mode === "signup" && "Create an account to continue."}
+            {mode === "forgot" && "Enter your email to reset your password."}
+          </p>
         </div>
 
         <button
           type="button"
           className="btn btn-outline"
           onClick={handleGoogleSignIn}
-          disabled={status === "redirecting"}
+          disabled={status === "redirecting" || status === "submitting"}
         >
           <GoogleIcon />
           {status === "redirecting" ? "Redirecting to Google..." : "Continue with Google"}
         </button>
 
+        <p className="divider-text">or</p>
+
+        <form onSubmit={handleEmailSubmit} className="stack self-stretch">
+          <label>
+            Email
+            <input
+              className="input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </label>
+
+          {mode !== "forgot" && (
+            <label>
+              Password
+              <input
+                className="input"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                minLength={6}
+                required
+              />
+            </label>
+          )}
+
+          <button type="submit" className="btn btn-primary" disabled={status === "submitting"}>
+            {status === "submitting"
+              ? "Please wait..."
+              : mode === "signin"
+                ? "Sign in"
+                : mode === "signup"
+                  ? "Create account"
+                  : "Send reset link"}
+          </button>
+        </form>
+
         {error && <p className="alert">{error}</p>}
+        {notice && <p className="meta">{notice}</p>}
+
+        <div className="stack stack-tight">
+          {mode === "signin" && (
+            <>
+              <button type="button" className="link" onClick={() => switchMode("signup")}>
+                Don&apos;t have an account? Sign up
+              </button>
+              <button type="button" className="link" onClick={() => switchMode("forgot")}>
+                Forgot password?
+              </button>
+            </>
+          )}
+          {mode !== "signin" && (
+            <button type="button" className="link" onClick={() => switchMode("signin")}>
+              Back to sign in
+            </button>
+          )}
+        </div>
 
         <p className="meta">
           By continuing you agree to our <Link href="/terms" className="link">Terms</Link> and{" "}
