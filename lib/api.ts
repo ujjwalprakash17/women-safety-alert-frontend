@@ -122,7 +122,11 @@ export async function subscribeToPush(): Promise<void> {
   const { public_key } = await api.getVapidPublicKey();
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(public_key),
+    // Cast needed: TS's Uint8Array is generic over ArrayBufferLike (which
+    // includes SharedArrayBuffer), but the DOM's BufferSource/ArrayBufferView
+    // expects a plain ArrayBuffer specifically — a real Uint8Array here is
+    // always ArrayBuffer-backed, this is a type-system mismatch, not a bug.
+    applicationServerKey: urlBase64ToUint8Array(public_key) as BufferSource,
   });
 
   const json = subscription.toJSON();
