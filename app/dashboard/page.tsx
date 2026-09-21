@@ -159,6 +159,9 @@ export default function DashboardPage() {
               >
                 {triggering ? "Locating..." : "SOS"}
               </button>
+              <p className="meta">
+                Misusing this alert system is a punishable offense under Indian law.
+              </p>
             </div>
           ) : (
             <div className="stack">
