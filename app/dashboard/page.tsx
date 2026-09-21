@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { api, getCurrentPosition, type Me, type SosOutcome, type SosSession } from "@/lib/api";
+import {
+  api,
+  getCurrentPosition,
+  subscribeToPush,
+  type Me,
+  type SosOutcome,
+  type SosSession,
+} from "@/lib/api";
+import { useSosLive } from "@/lib/useSosLive";
 import ShieldIcon from "@/components/ShieldIcon";
 
 type LoadState = "loading" | "ready" | "unauthenticated";
@@ -16,6 +24,11 @@ export default function DashboardPage() {
   const [triggering, setTriggering] = useState(false);
   const [resolving, setResolving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
+  const [enablingAlerts, setEnablingAlerts] = useState(false);
+
+  const isActive = session?.status === "active";
+  const live = useSosLive(isActive ? session!.id : null);
 
   useEffect(() => {
     (async () => {
@@ -35,6 +48,44 @@ export default function DashboardPage() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Check whether push is already enabled for this browser, so returning
+  // users aren't re-prompted for a permission they've already granted.
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        setPushEnabled(!!subscription);
+      } catch {
+        // Push isn't available in this browser — leave pushEnabled as null,
+        // the "Enable alerts" button just won't render.
+      }
+    })();
+  }, []);
+
+  // The producer side of the live map: while a session is active, keep
+  // posting fresh browser locations so there's something for connected
+  // WebSocket watchers (useSosLive above) to actually receive.
+  useEffect(() => {
+    if (!session || session.status !== "active") return;
+    if (!("geolocation" in navigator)) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        api
+          .updateSosLocation(session.id, position.coords.latitude, position.coords.longitude)
+          .catch(() => {
+            // Best-effort — a single missed update isn't worth surfacing an error for.
+          });
+      },
+      () => {},
+      { enableHighAccuracy: true }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [session?.id, session?.status]);
 
   async function handleTrigger() {
     setError(null);
@@ -67,6 +118,19 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleEnableAlerts() {
+    setError(null);
+    setEnablingAlerts(true);
+    try {
+      await subscribeToPush();
+      setPushEnabled(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setEnablingAlerts(false);
+    }
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut();
     router.replace("/login");
@@ -81,6 +145,8 @@ export default function DashboardPage() {
   }
 
   const initial = (me?.email ?? "?").charAt(0).toUpperCase();
+  const displayLat = live.lat ?? session?.lat;
+  const displayLng = live.lng ?? session?.lng;
 
   return (
     <>
@@ -92,6 +158,17 @@ export default function DashboardPage() {
           Women Safety SOS
         </div>
         <div className="row">
+          {pushEnabled === false && (
+            <button
+              type="button"
+              className="btn btn-outline btn-icon"
+              onClick={handleEnableAlerts}
+              disabled={enablingAlerts}
+            >
+              {enablingAlerts ? "Enabling..." : "Enable alerts"}
+            </button>
+          )}
+          {pushEnabled === true && <span className="meta">Alerts on</span>}
           <span className="meta">{me?.email}</span>
           <div className="avatar">{initial}</div>
           <button type="button" className="btn btn-ghost" onClick={handleSignOut}>
@@ -107,7 +184,7 @@ export default function DashboardPage() {
           {!session || session.status === "resolved" ? (
             <div className="stack stack-center">
               <div>
-                <p className="eyebrow">Milestone 2</p>
+                <p className="eyebrow">Milestone 3</p>
                 <h1>
                   {session?.status === "resolved" ? "Session resolved" : "Ready when you are"}
                 </h1>
@@ -133,7 +210,15 @@ export default function DashboardPage() {
                 <span className="badge badge-active">Live</span>
               </div>
               <p className="meta">
-                Location: {session.lat.toFixed(5)}, {session.lng.toFixed(5)}
+                Location: {displayLat?.toFixed(5)}, {displayLng?.toFixed(5)}
+              </p>
+              <p className="meta">
+                {live.status === "open" && "Live updates connected"}
+                {live.status === "connecting" && "Connecting to live updates..."}
+                {live.status === "closed" && "Live updates disconnected"}
+                {live.status === "error" && "Live updates unavailable"}
+                {live.lastUpdatedAt &&
+                  ` · last update ${new Date(live.lastUpdatedAt).toLocaleTimeString()}`}
               </p>
               <p className="meta">
                 Triggered {new Date(session.created_at).toLocaleTimeString()}

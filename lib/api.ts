@@ -70,6 +70,16 @@ export const api = {
     radiusKm = 5
   ): Promise<(SosSession & { distance_meters: number })[]> =>
     authedFetch(`/sos/nearby?lat=${lat}&lng=${lng}&radius_km=${radiusKm}`),
+
+  getVapidPublicKey: (): Promise<{ public_key: string }> =>
+    authedFetch("/push/vapid-public-key"),
+
+  subscribePush: (sub: {
+    endpoint: string;
+    p256dh: string;
+    auth: string;
+  }): Promise<{ id: string; endpoint: string }> =>
+    authedFetch("/push/subscribe", { method: "POST", body: JSON.stringify(sub) }),
 };
 
 export function getCurrentPosition(): Promise<GeolocationPosition> {
@@ -82,5 +92,37 @@ export function getCurrentPosition(): Promise<GeolocationPosition> {
       enableHighAccuracy: true,
       timeout: 10_000,
     });
+  });
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+}
+
+/** Requests notification permission + a push subscription, then registers it
+ * with the backend. Must be called from a user gesture (a click handler) —
+ * `Notification.requestPermission()` is blocked/bad UX if auto-run on mount. */
+export async function subscribeToPush(): Promise<void> {
+  const registration = await navigator.serviceWorker.ready;
+
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") {
+    throw new Error("Notification permission denied.");
+  }
+
+  const { public_key } = await api.getVapidPublicKey();
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(public_key),
+  });
+
+  const json = subscription.toJSON();
+  await api.subscribePush({
+    endpoint: json.endpoint!,
+    p256dh: json.keys!.p256dh!,
+    auth: json.keys!.auth!,
   });
 }
