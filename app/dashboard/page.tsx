@@ -121,6 +121,9 @@ export default function DashboardPage() {
   return (
     <>
       <Topbar me={me}>
+        <Link href="/contacts" className="btn btn-outline btn-icon">
+          Trusted contacts
+        </Link>
         <Link href="/nearby" className="btn btn-outline btn-icon">
           Nearby alerts
         </Link>

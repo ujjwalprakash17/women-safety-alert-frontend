@@ -21,6 +21,9 @@ async function authedFetch(path: string, options: RequestInit = {}) {
     const body = await res.text().catch(() => "");
     throw new Error(`${res.status} ${res.statusText}${body ? `: ${body}` : ""}`);
   }
+  // 204 No Content (e.g. DELETE endpoints) has no body — res.json() throws
+  // on an empty string, so handle it once here instead of per-call-site.
+  if (res.status === 204) return undefined;
   return res.json();
 }
 
@@ -40,6 +43,14 @@ export interface SosSession {
 
 export interface NearbySosSession extends SosSession {
   distance_meters: number;
+}
+
+export interface TrustedContact {
+  id: string;
+  name: string;
+  phone_number: string;
+  relationship_label: string | null;
+  created_at: string;
 }
 
 export interface Me {
@@ -82,6 +93,18 @@ export const api = {
     auth: string;
   }): Promise<{ id: string; endpoint: string }> =>
     authedFetch("/push/subscribe", { method: "POST", body: JSON.stringify(sub) }),
+
+  listContacts: (): Promise<TrustedContact[]> => authedFetch("/contacts"),
+
+  addContact: (contact: {
+    name: string;
+    phone_number: string;
+    relationship_label?: string;
+  }): Promise<TrustedContact> =>
+    authedFetch("/contacts", { method: "POST", body: JSON.stringify(contact) }),
+
+  deleteContact: (id: string): Promise<void> =>
+    authedFetch(`/contacts/${id}`, { method: "DELETE" }),
 };
 
 export function getCurrentPosition(): Promise<GeolocationPosition> {
