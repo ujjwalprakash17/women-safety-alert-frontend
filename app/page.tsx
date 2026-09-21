@@ -9,7 +9,6 @@ export default function Home() {
           <ShieldIcon size={24} />
         </span>
         <div>
-          <p className="eyebrow">Milestone 2</p>
           <h1>Women Safety SOS</h1>
         </div>
         <p>Trigger an SOS and share your live location with nearby responders.</p>

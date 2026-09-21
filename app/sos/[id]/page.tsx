@@ -6,6 +6,8 @@ import { api, type SosSession } from "@/lib/api";
 import { useSosLive } from "@/lib/useSosLive";
 import { useAuthedUser } from "@/lib/useAuthedUser";
 import Topbar from "@/components/Topbar";
+import BottomNav from "@/components/BottomNav";
+import PageLoading from "@/components/PageLoading";
 
 export default function WatchSosPage() {
   const params = useParams();
@@ -39,13 +41,7 @@ export default function WatchSosPage() {
       ? `https://www.google.com/maps/dir/?api=1&destination=${displayLat},${displayLng}`
       : null;
 
-  if (authLoading || loading) {
-    return (
-      <main className="page">
-        <p className="meta">Loading...</p>
-      </main>
-    );
-  }
+  if (authLoading || loading) return <PageLoading />;
 
   return (
     <>
@@ -99,6 +95,8 @@ export default function WatchSosPage() {
           )}
         </div>
       </main>
+
+      <BottomNav />
     </>
   );
 }

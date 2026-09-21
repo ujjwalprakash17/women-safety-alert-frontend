@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { api, type TrustedContact } from "@/lib/api";
 import { useAuthedUser } from "@/lib/useAuthedUser";
 import Topbar from "@/components/Topbar";
+import BottomNav from "@/components/BottomNav";
+import PageLoading from "@/components/PageLoading";
 
 const MAX_CONTACTS = 5;
 
@@ -55,13 +57,7 @@ export default function ContactsPage() {
     }
   }
 
-  if (authLoading || contacts === null) {
-    return (
-      <main className="page">
-        <p className="meta">Loading...</p>
-      </main>
-    );
-  }
+  if (authLoading || contacts === null) return <PageLoading />;
 
   const atLimit = contacts.length >= MAX_CONTACTS;
 
@@ -72,7 +68,6 @@ export default function ContactsPage() {
       <main className="page">
         <div className="card card-wide stack">
           <div>
-            <p className="eyebrow">Milestone 5</p>
             <h1>Trusted contacts</h1>
             <p>
               Up to {MAX_CONTACTS} people. SMS delivery on SOS isn&apos;t wired up yet — this just
@@ -82,26 +77,31 @@ export default function ContactsPage() {
 
           {(error || authError) && <p className="alert">{error ?? authError}</p>}
 
+          {contacts.length === 0 && (
+            <p className="meta">No trusted contacts yet — add your first one below.</p>
+          )}
+
           {contacts.length > 0 && (
             <div className="stack">
               {contacts.map((c) => (
-                <div key={c.id} className="card stack card-compact">
-                  <div className="spread">
+                <div key={c.id} className="list-item row">
+                  <div className="avatar">{c.name.charAt(0).toUpperCase()}</div>
+                  <div className="list-item-content">
                     <div>
                       <strong>{c.name}</strong>
                       {c.relationship_label && (
                         <span className="meta"> &middot; {c.relationship_label}</span>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      onClick={() => handleDelete(c.id)}
-                    >
-                      Remove
-                    </button>
+                    <p className="meta">{c.phone_number}</p>
                   </div>
-                  <p className="meta">{c.phone_number}</p>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-icon"
+                    onClick={() => handleDelete(c.id)}
+                  >
+                    Remove
+                  </button>
                 </div>
               ))}
             </div>
@@ -151,6 +151,8 @@ export default function ContactsPage() {
           )}
         </div>
       </main>
+
+      <BottomNav />
     </>
   );
 }

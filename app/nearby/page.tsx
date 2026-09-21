@@ -5,6 +5,8 @@ import Link from "next/link";
 import { api, getCurrentPosition, type NearbySosSession } from "@/lib/api";
 import { useAuthedUser } from "@/lib/useAuthedUser";
 import Topbar from "@/components/Topbar";
+import BottomNav from "@/components/BottomNav";
+import PageLoading from "@/components/PageLoading";
 
 function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)} m away`;
@@ -41,13 +43,7 @@ export default function NearbyPage() {
     if (sessions !== null) handleSearch(value);
   }
 
-  if (authLoading) {
-    return (
-      <main className="page">
-        <p className="meta">Loading...</p>
-      </main>
-    );
-  }
+  if (authLoading) return <PageLoading />;
 
   return (
     <>
@@ -57,7 +53,6 @@ export default function NearbyPage() {
         <div className="card card-wide stack">
           <div className="spread">
             <div>
-              <p className="eyebrow">Milestone 4</p>
               <h1>Nearby alerts</h1>
             </div>
             <select
@@ -82,6 +77,10 @@ export default function NearbyPage() {
             {searching ? "Searching..." : sessions === null ? "Search nearby" : "Refresh"}
           </button>
 
+          {sessions === null && (
+            <p className="meta">Tap search to find active alerts near you.</p>
+          )}
+
           {sessions !== null && sessions.length === 0 && (
             <p className="meta">No active alerts nearby right now.</p>
           )}
@@ -89,7 +88,7 @@ export default function NearbyPage() {
           {sessions !== null && sessions.length > 0 && (
             <div className="stack">
               {sessions.map((s) => (
-                <div key={s.id} className="card stack card-compact">
+                <Link key={s.id} href={`/sos/${s.id}`} className="list-item stack">
                   <div className="spread">
                     <span className="badge badge-active">Live</span>
                     <span className="meta">{formatDistance(s.distance_meters)}</span>
@@ -97,15 +96,14 @@ export default function NearbyPage() {
                   <p className="meta">
                     Triggered {new Date(s.created_at).toLocaleTimeString()}
                   </p>
-                  <Link href={`/sos/${s.id}`} className="btn btn-outline">
-                    Watch
-                  </Link>
-                </div>
+                </Link>
               ))}
             </div>
           )}
         </div>
       </main>
+
+      <BottomNav />
     </>
   );
 }

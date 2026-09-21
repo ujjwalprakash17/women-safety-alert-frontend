@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import ShieldIcon from "@/components/ShieldIcon";
+import PageLoading from "@/components/PageLoading";
 
 type Status = "checking" | "idle" | "redirecting";
 
@@ -45,6 +46,8 @@ export default function LoginPage() {
     }
   }
 
+  if (status === "checking") return <PageLoading />;
+
   return (
     <main className="page">
       <div className="card stack stack-center">
@@ -60,7 +63,7 @@ export default function LoginPage() {
           type="button"
           className="btn btn-outline"
           onClick={handleGoogleSignIn}
-          disabled={status === "checking" || status === "redirecting"}
+          disabled={status === "redirecting"}
         >
           <GoogleIcon />
           {status === "redirecting" ? "Redirecting to Google..." : "Continue with Google"}

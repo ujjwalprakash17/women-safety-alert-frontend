@@ -58,11 +58,19 @@ export interface Me {
   supabase_user_id: string;
   phone_number: string | null;
   email: string | null;
+  display_name: string | null;
+  consent_accepted_at: string | null;
   created_at: string;
 }
 
 export const api = {
   me: (): Promise<Me> => authedFetch("/me"),
+
+  updateProfile: (profile: {
+    display_name: string;
+    phone_number?: string;
+    accept_consent: boolean;
+  }): Promise<Me> => authedFetch("/me", { method: "PATCH", body: JSON.stringify(profile) }),
 
   triggerSos: (lat: number, lng: number): Promise<SosSession> =>
     authedFetch("/sos", { method: "POST", body: JSON.stringify({ lat, lng }) }),

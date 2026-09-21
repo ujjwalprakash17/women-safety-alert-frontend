@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   api,
   getCurrentPosition,
@@ -12,6 +11,8 @@ import {
 import { useSosLive } from "@/lib/useSosLive";
 import { useAuthedUser } from "@/lib/useAuthedUser";
 import Topbar from "@/components/Topbar";
+import BottomNav from "@/components/BottomNav";
+import PageLoading from "@/components/PageLoading";
 
 export default function DashboardPage() {
   const { me, loading, error: authError } = useAuthedUser();
@@ -36,7 +37,7 @@ export default function DashboardPage() {
         setPushEnabled(!!subscription);
       } catch {
         // Push isn't available in this browser — leave pushEnabled as null,
-        // the "Enable alerts" button just won't render.
+        // the "Enable alerts" row just won't render.
       }
     })();
   }, []);
@@ -107,47 +108,40 @@ export default function DashboardPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <main className="page">
-        <p className="meta">Loading...</p>
-      </main>
-    );
-  }
+  if (loading) return <PageLoading />;
 
   const displayLat = live.lat ?? session?.lat;
   const displayLng = live.lng ?? session?.lng;
 
   return (
     <>
-      <Topbar me={me}>
-        <Link href="/contacts" className="btn btn-outline btn-icon">
-          Trusted contacts
-        </Link>
-        <Link href="/nearby" className="btn btn-outline btn-icon">
-          Nearby alerts
-        </Link>
-        {pushEnabled === false && (
-          <button
-            type="button"
-            className="btn btn-outline btn-icon"
-            onClick={handleEnableAlerts}
-            disabled={enablingAlerts}
-          >
-            {enablingAlerts ? "Enabling..." : "Enable alerts"}
-          </button>
-        )}
-        {pushEnabled === true && <span className="meta">Alerts on</span>}
-      </Topbar>
+      <Topbar me={me} />
 
       <main className="page">
         <div className="card card-wide stack">
           {(error || authError) && <p className="alert">{error ?? authError}</p>}
 
+          {pushEnabled !== null && (
+            <div className="spread">
+              <span className="meta">Push alerts</span>
+              {pushEnabled ? (
+                <span className="badge badge-resolved">On</span>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-outline btn-icon"
+                  onClick={handleEnableAlerts}
+                  disabled={enablingAlerts}
+                >
+                  {enablingAlerts ? "Enabling..." : "Enable"}
+                </button>
+              )}
+            </div>
+          )}
+
           {!session || session.status === "resolved" ? (
             <div className="stack stack-center">
               <div>
-                <p className="eyebrow">Milestone 4</p>
                 <h1>
                   {session?.status === "resolved" ? "Session resolved" : "Ready when you are"}
                 </h1>
@@ -222,6 +216,8 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+
+      <BottomNav />
     </>
   );
 }
