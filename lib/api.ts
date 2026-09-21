@@ -92,6 +92,8 @@ export const api = {
 
   getSos: (id: string): Promise<SosSession> => authedFetch(`/sos/${id}`),
 
+  getActiveSos: (): Promise<SosSession | null> => authedFetch("/sos/active"),
+
   getVapidPublicKey: (): Promise<{ public_key: string }> =>
     authedFetch("/push/vapid-public-key"),
 

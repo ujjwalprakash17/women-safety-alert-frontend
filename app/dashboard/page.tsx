@@ -26,6 +26,21 @@ export default function DashboardPage() {
   const isActive = session?.status === "active";
   const live = useSosLive(isActive ? session!.id : null);
 
+  // Restore an already-active session on load (e.g. tab was closed and
+  // reopened) — without this, the dashboard only ever knew about a session
+  // it had just created client-side in the same page load.
+  useEffect(() => {
+    if (loading) return;
+    api
+      .getActiveSos()
+      .then((active) => {
+        if (active) setSession(active);
+      })
+      .catch(() => {
+        // Best-effort restore — an idle SOS button is a safe fallback.
+      });
+  }, [loading]);
+
   // Check whether push is already enabled for this browser, so returning
   // users aren't re-prompted for a permission they've already granted.
   useEffect(() => {
