@@ -1,51 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import ShieldIcon from "@/components/ShieldIcon";
 
-type Status = "idle" | "redirecting" | "loading-me" | "done";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+type Status = "checking" | "idle" | "redirecting";
 
 export default function LoginPage() {
-  const [status, setStatus] = useState<Status>("idle");
+  const router = useRouter();
+  const [status, setStatus] = useState<Status>("checking");
   const [error, setError] = useState<string | null>(null);
-  const [me, setMe] = useState<unknown>(null);
-
-  async function fetchMe(accessToken: string) {
-    setStatus("loading-me");
-    try {
-      const res = await fetch(`${API_BASE_URL}/me`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!res.ok) {
-        throw new Error(`Backend /me returned ${res.status}`);
-      }
-      setMe(await res.json());
-      setStatus("done");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      setStatus("idle");
-    }
-  }
 
   useEffect(() => {
-    // Covers the redirect back from Google: Supabase's client parses the
-    // OAuth response from the URL on load and restores the session.
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
-        fetchMe(data.session.access_token);
+        router.replace("/dashboard");
+        return;
       }
+      setStatus("idle");
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session) {
-          fetchMe(session.access_token);
-        }
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        router.replace("/dashboard");
       }
-    );
+    });
 
     return () => listener.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -62,41 +42,30 @@ export default function LoginPage() {
       setError(error.message);
       setStatus("idle");
     }
-    // On success the browser navigates away to Google, so nothing else to do here.
   }
 
   return (
     <main className="page">
-      <div className="card stack">
+      <div className="card stack stack-center">
+        <span className="brand-mark brand-mark-lg">
+          <ShieldIcon size={24} />
+        </span>
         <div>
-          <p className="eyebrow">Milestone 1</p>
-          <h1>Sign in</h1>
+          <h1>Women Safety SOS</h1>
+          <p>Sign in to continue.</p>
         </div>
 
-        {status !== "done" && (
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={handleGoogleSignIn}
-            disabled={status === "redirecting" || status === "loading-me"}
-          >
-            <GoogleIcon />
-            {status === "redirecting"
-              ? "Redirecting to Google..."
-              : status === "loading-me"
-                ? "Signing you in..."
-                : "Continue with Google"}
-          </button>
-        )}
+        <button
+          type="button"
+          className="btn btn-outline"
+          onClick={handleGoogleSignIn}
+          disabled={status === "checking" || status === "redirecting"}
+        >
+          <GoogleIcon />
+          {status === "redirecting" ? "Redirecting to Google..." : "Continue with Google"}
+        </button>
 
         {error && <p className="alert">{error}</p>}
-
-        {status === "done" && (
-          <div className="stack">
-            <p className="meta">Logged in. Response from backend GET /me:</p>
-            <pre>{JSON.stringify(me, null, 2)}</pre>
-          </div>
-        )}
       </div>
     </main>
   );

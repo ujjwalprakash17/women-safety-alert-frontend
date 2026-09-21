@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import { THEME } from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,14 +15,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Women Safety SOS",
-  description:
-    "A personal safety app — trigger an SOS and alert nearby verified responders and trusted contacts.",
-  manifest: "/manifest.json",
+  title: THEME.name,
+  description: THEME.description,
 };
 
 export const viewport: Viewport = {
-  themeColor: "#c8102e",
+  themeColor: THEME.brandColor,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
