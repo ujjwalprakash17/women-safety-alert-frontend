@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import ShieldIcon from "@/components/ShieldIcon";
 
@@ -66,6 +67,11 @@ export default function LoginPage() {
         </button>
 
         {error && <p className="alert">{error}</p>}
+
+        <p className="meta">
+          By continuing you agree to our <Link href="/terms" className="link">Terms</Link> and{" "}
+          <Link href="/privacy" className="link">Privacy Policy</Link>.
+        </p>
       </div>
     </main>
   );

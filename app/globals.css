@@ -165,6 +165,14 @@ label {
   color: var(--foreground);
 }
 
+.input-inline {
+  width: auto;
+}
+
+.card-compact {
+  padding: 16px;
+}
+
 .input:focus {
   outline: 2px solid var(--primary);
   outline-offset: 1px;
@@ -412,4 +420,24 @@ pre {
 .outcome-buttons .btn {
   padding: 10px 8px;
   font-size: 13px;
+}
+
+/* ---- long-form text pages (privacy, terms) ---- */
+
+.prose {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+.prose h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 32px;
+  margin-bottom: 8px;
+}
+
+.prose p {
+  color: var(--foreground);
+  margin-bottom: 16px;
 }

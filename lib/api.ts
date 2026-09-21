@@ -38,6 +38,10 @@ export interface SosSession {
   resolved_at: string | null;
 }
 
+export interface NearbySosSession extends SosSession {
+  distance_meters: number;
+}
+
 export interface Me {
   id: string;
   supabase_user_id: string;
@@ -64,12 +68,10 @@ export const api = {
       body: JSON.stringify({ outcome }),
     }),
 
-  nearbySos: (
-    lat: number,
-    lng: number,
-    radiusKm = 5
-  ): Promise<(SosSession & { distance_meters: number })[]> =>
+  nearbySos: (lat: number, lng: number, radiusKm = 5): Promise<NearbySosSession[]> =>
     authedFetch(`/sos/nearby?lat=${lat}&lng=${lng}&radius_km=${radiusKm}`),
+
+  getSos: (id: string): Promise<SosSession> => authedFetch(`/sos/${id}`),
 
   getVapidPublicKey: (): Promise<{ public_key: string }> =>
     authedFetch("/push/vapid-public-key"),
@@ -95,15 +97,15 @@ export function getCurrentPosition(): Promise<GeolocationPosition> {
   });
 }
 
-function urlBase64ToUint8Array(base64String: string) {
-    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-    const raw = atob(base64);
-    const bytes = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; i++) {
-          bytes[i] = raw.charCodeAt(i);
-    }
-    return bytes;
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) {
+    bytes[i] = raw.charCodeAt(i);
+  }
+  return bytes;
 }
 
 /** Requests notification permission + a push subscription, then registers it

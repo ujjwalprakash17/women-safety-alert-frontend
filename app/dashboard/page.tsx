@@ -1,25 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import Link from "next/link";
 import {
   api,
   getCurrentPosition,
   subscribeToPush,
-  type Me,
   type SosOutcome,
   type SosSession,
 } from "@/lib/api";
 import { useSosLive } from "@/lib/useSosLive";
-import ShieldIcon from "@/components/ShieldIcon";
-
-type LoadState = "loading" | "ready" | "unauthenticated";
+import { useAuthedUser } from "@/lib/useAuthedUser";
+import Topbar from "@/components/Topbar";
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const [loadState, setLoadState] = useState<LoadState>("loading");
-  const [me, setMe] = useState<Me | null>(null);
+  const { me, loading, error: authError } = useAuthedUser();
   const [session, setSession] = useState<SosSession | null>(null);
   const [triggering, setTriggering] = useState(false);
   const [resolving, setResolving] = useState(false);
@@ -29,25 +24,6 @@ export default function DashboardPage() {
 
   const isActive = session?.status === "active";
   const live = useSosLive(isActive ? session!.id : null);
-
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        router.replace("/login");
-        return;
-      }
-      try {
-        const meResult = await api.me();
-        setMe(meResult);
-        setLoadState("ready");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-        setLoadState("ready");
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Check whether push is already enabled for this browser, so returning
   // users aren't re-prompted for a permission they've already granted.
@@ -131,12 +107,7 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    router.replace("/login");
-  }
-
-  if (loadState === "loading") {
+  if (loading) {
     return (
       <main className="page">
         <p className="meta">Loading...</p>
@@ -144,47 +115,36 @@ export default function DashboardPage() {
     );
   }
 
-  const initial = (me?.email ?? "?").charAt(0).toUpperCase();
   const displayLat = live.lat ?? session?.lat;
   const displayLng = live.lng ?? session?.lng;
 
   return (
     <>
-      <header className="topbar">
-        <div className="brand">
-          <span className="brand-mark">
-            <ShieldIcon />
-          </span>
-          Women Safety SOS
-        </div>
-        <div className="row">
-          {pushEnabled === false && (
-            <button
-              type="button"
-              className="btn btn-outline btn-icon"
-              onClick={handleEnableAlerts}
-              disabled={enablingAlerts}
-            >
-              {enablingAlerts ? "Enabling..." : "Enable alerts"}
-            </button>
-          )}
-          {pushEnabled === true && <span className="meta">Alerts on</span>}
-          <span className="meta">{me?.email}</span>
-          <div className="avatar">{initial}</div>
-          <button type="button" className="btn btn-ghost" onClick={handleSignOut}>
-            Sign out
+      <Topbar me={me}>
+        <Link href="/nearby" className="btn btn-outline btn-icon">
+          Nearby alerts
+        </Link>
+        {pushEnabled === false && (
+          <button
+            type="button"
+            className="btn btn-outline btn-icon"
+            onClick={handleEnableAlerts}
+            disabled={enablingAlerts}
+          >
+            {enablingAlerts ? "Enabling..." : "Enable alerts"}
           </button>
-        </div>
-      </header>
+        )}
+        {pushEnabled === true && <span className="meta">Alerts on</span>}
+      </Topbar>
 
       <main className="page">
         <div className="card card-wide stack">
-          {error && <p className="alert">{error}</p>}
+          {(error || authError) && <p className="alert">{error ?? authError}</p>}
 
           {!session || session.status === "resolved" ? (
             <div className="stack stack-center">
               <div>
-                <p className="eyebrow">Milestone 3</p>
+                <p className="eyebrow">Milestone 4</p>
                 <h1>
                   {session?.status === "resolved" ? "Session resolved" : "Ready when you are"}
                 </h1>
