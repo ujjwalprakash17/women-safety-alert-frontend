@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, subscribeToPush, unsubscribeFromPush } from "@/lib/api";
+import { uploadAvatar } from "@/lib/avatarUpload";
 import { isValidIndianMobile } from "@/lib/phone";
 import { useAuthedUser } from "@/lib/useAuthedUser";
 import { useToast } from "@/components/ToastProvider";
+import Avatar from "@/components/Avatar";
 import PhoneInput from "@/components/PhoneInput";
 import Topbar from "@/components/Topbar";
 import BottomNav from "@/components/BottomNav";
@@ -19,10 +21,14 @@ export default function SettingsPage() {
   const [nameOverride, setNameOverride] = useState<string | null>(null);
   const [phoneOverride, setPhoneOverride] = useState<string | null>(null);
   const [radiusOverride, setRadiusOverride] = useState<number | null>(null);
+  const [avatarUrlOverride, setAvatarUrlOverride] = useState<string | null>(null);
   const name = nameOverride ?? me?.display_name ?? "";
   const phone = phoneOverride ?? me?.phone_number ?? "";
   const radiusKm = radiusOverride ?? me?.default_radius_km ?? 5;
+  const avatarUrl = avatarUrlOverride ?? me?.avatar_url ?? null;
   const [saving, setSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
 
@@ -65,6 +71,28 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file later
+    if (!file || !me) return;
+
+    setAvatarUploading(true);
+    try {
+      const url = await uploadAvatar(file, me.supabase_user_id);
+      await api.updateProfile({
+        display_name: name,
+        phone_number: phone || undefined,
+        avatar_url: url,
+      });
+      setAvatarUrlOverride(url);
+      showToast("Profile photo updated.", "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : String(err), "error");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
   async function handleTogglePush() {
     setPushBusy(true);
     try {
@@ -93,6 +121,30 @@ export default function SettingsPage() {
       <main className="page">
         <div className="card card-wide stack">
           <h1>Settings</h1>
+
+          <div className="avatar-picker">
+            <Avatar name={name || me?.email} url={avatarUrl} size="lg" />
+            <div className="stack-tight">
+              <button
+                type="button"
+                className="btn btn-outline btn-icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarUploading}
+              >
+                {avatarUploading ? "Uploading..." : "Change photo"}
+              </button>
+              <p className="meta">Shown to responders when you raise an alert.</p>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="visually-hidden"
+              onChange={handleAvatarChange}
+            />
+          </div>
+
+          <hr className="divider" />
 
           <form onSubmit={handleSave} className="stack">
             <label>

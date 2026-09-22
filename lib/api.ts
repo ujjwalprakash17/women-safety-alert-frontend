@@ -67,6 +67,7 @@ export interface SosSession {
   lng: number;
   display_name: string | null;
   phone_number: string | null;
+  avatar_url: string | null;
   created_at: string;
   updated_at: string;
   resolved_at: string | null;
@@ -90,6 +91,7 @@ export interface Me {
   phone_number: string | null;
   email: string | null;
   display_name: string | null;
+  avatar_url: string | null;
   consent_accepted_at: string | null;
   default_radius_km: number;
   is_banned: boolean;
@@ -103,6 +105,7 @@ export const api = {
   updateProfile: (profile: {
     display_name: string;
     phone_number?: string;
+    avatar_url?: string;
     default_radius_km?: number;
     accept_consent?: boolean;
   }): Promise<Me> => authedFetch("/me", { method: "PATCH", body: JSON.stringify(profile) }),

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { NAV_ITEMS } from "@/lib/navItems";
 import type { Me } from "@/lib/api";
+import Avatar from "./Avatar";
 import ShieldIcon from "./ShieldIcon";
 
 export default function Topbar({ me }: { me: Me | null }) {
@@ -13,7 +14,6 @@ export default function Topbar({ me }: { me: Me | null }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const initial = (me?.display_name ?? me?.email ?? "?").charAt(0).toUpperCase();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -58,7 +58,7 @@ export default function Topbar({ me }: { me: Me | null }) {
           onClick={() => setMenuOpen((open) => !open)}
           aria-label="Account menu"
         >
-          <div className="avatar">{initial}</div>
+          <Avatar name={me?.display_name ?? me?.email} url={me?.avatar_url} />
         </button>
 
         {menuOpen && (

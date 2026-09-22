@@ -6,6 +6,7 @@ import { api, type SosSession } from "@/lib/api";
 import { useSosLive } from "@/lib/useSosLive";
 import { useAuthedUser } from "@/lib/useAuthedUser";
 import { useToast } from "@/components/ToastProvider";
+import Avatar from "@/components/Avatar";
 import Topbar from "@/components/Topbar";
 import BottomNav from "@/components/BottomNav";
 import PageLoading from "@/components/PageLoading";
@@ -63,7 +64,10 @@ export default function WatchSosPage() {
           ) : (
             <>
               <div className="spread">
-                <h1>{session.display_name ?? "Watching alert"}</h1>
+                <div className="row">
+                  <Avatar name={session.display_name} url={session.avatar_url} size="lg" />
+                  <h1>{session.display_name ?? "Watching alert"}</h1>
+                </div>
                 <span className={`badge ${resolved ? "badge-resolved" : "badge-active"}`}>
                   {resolved ? "Resolved" : "Live"}
                 </span>
