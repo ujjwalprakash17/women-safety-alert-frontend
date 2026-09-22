@@ -91,8 +91,12 @@ export default function WatchSosPage() {
                     Triggered {new Date(session.created_at).toLocaleTimeString()}
                   </p>
 
-                  <div className="row">
-                    {mapsUrl && (
+                  {/* Navigate only, by design — no direct call/message option
+                      on the responder screen (see PRD 3.4: kept minimal on
+                      purpose). The phone number above is still shown as
+                      reference text, not a one-tap call action. */}
+                  {mapsUrl && (
+                    <div className="row">
                       <a
                         href={mapsUrl}
                         target="_blank"
@@ -101,13 +105,8 @@ export default function WatchSosPage() {
                       >
                         Navigate
                       </a>
-                    )}
-                    {session.phone_number && (
-                      <a href={`tel:${session.phone_number}`} className="btn btn-outline">
-                        Call
-                      </a>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </>
               )}
             </>
