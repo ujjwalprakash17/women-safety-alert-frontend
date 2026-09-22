@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import { ToastProvider } from "@/components/ToastProvider";
+import InstallPrompt from "@/components/InstallPrompt";
 import { THEME } from "@/lib/theme";
 import "./globals.css";
 
@@ -28,7 +30,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
         <ServiceWorkerRegister />
-        {children}
+        <ToastProvider>
+          {children}
+          <InstallPrompt />
+        </ToastProvider>
       </body>
     </html>
   );

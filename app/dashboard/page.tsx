@@ -10,21 +10,27 @@ import {
 } from "@/lib/api";
 import { useSosLive } from "@/lib/useSosLive";
 import { useAuthedUser } from "@/lib/useAuthedUser";
+import { useToast } from "@/components/ToastProvider";
 import Topbar from "@/components/Topbar";
 import BottomNav from "@/components/BottomNav";
 import PageLoading from "@/components/PageLoading";
 
 export default function DashboardPage() {
   const { me, loading, error: authError } = useAuthedUser();
+  const { showToast } = useToast();
   const [session, setSession] = useState<SosSession | null>(null);
   const [triggering, setTriggering] = useState(false);
   const [resolving, setResolving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
   const [enablingAlerts, setEnablingAlerts] = useState(false);
 
   const isActive = session?.status === "active";
   const live = useSosLive(isActive ? session!.id : null);
+
+  useEffect(() => {
+    if (authError) showToast(authError, "error");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authError]);
 
   // Restore an already-active session on load (e.g. tab was closed and
   // reopened) — without this, the dashboard only ever knew about a session
@@ -80,7 +86,6 @@ export default function DashboardPage() {
   }, [session?.id, session?.status]);
 
   async function handleTrigger() {
-    setError(null);
     setTriggering(true);
     try {
       const position = await getCurrentPosition();
@@ -89,8 +94,9 @@ export default function DashboardPage() {
         position.coords.longitude
       );
       setSession(created);
+      showToast("SOS sent — sharing your live location.", "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      showToast(err instanceof Error ? err.message : String(err), "error");
     } finally {
       setTriggering(false);
     }
@@ -98,26 +104,26 @@ export default function DashboardPage() {
 
   async function handleResolve(outcome: SosOutcome) {
     if (!session) return;
-    setError(null);
     setResolving(true);
     try {
       const resolved = await api.resolveSos(session.id, outcome);
       setSession(resolved);
+      showToast(`Marked as "${outcome}".`, "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      showToast(err instanceof Error ? err.message : String(err), "error");
     } finally {
       setResolving(false);
     }
   }
 
   async function handleEnableAlerts() {
-    setError(null);
     setEnablingAlerts(true);
     try {
       await subscribeToPush();
       setPushEnabled(true);
+      showToast("Push alerts enabled.", "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      showToast(err instanceof Error ? err.message : String(err), "error");
     } finally {
       setEnablingAlerts(false);
     }
@@ -157,8 +163,6 @@ export default function DashboardPage() {
 
       <main className="page">
         <div className="card card-wide stack">
-          {(error || authError) && <p className="alert">{error ?? authError}</p>}
-
           {pushEnabled !== null && (
             <div className="spread">
               <span className="meta">Push alerts</span>
@@ -195,7 +199,10 @@ export default function DashboardPage() {
                 onClick={handleTrigger}
                 disabled={triggering}
               >
-                {triggering ? "Locating..." : "SOS"}
+                SOS
+                <span className="sos-button-hint">
+                  {triggering ? "Locating..." : "Tap to alert"}
+                </span>
               </button>
               <p className="meta">
                 Misusing this alert system is a punishable offense under Indian law.

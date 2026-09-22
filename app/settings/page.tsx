@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { api, subscribeToPush, unsubscribeFromPush } from "@/lib/api";
 import { useAuthedUser } from "@/lib/useAuthedUser";
+import { useToast } from "@/components/ToastProvider";
 import Topbar from "@/components/Topbar";
 import BottomNav from "@/components/BottomNav";
 import PageLoading from "@/components/PageLoading";
 
 export default function SettingsPage() {
   const { me, loading: authLoading, error: authError } = useAuthedUser();
+  const { showToast } = useToast();
   // Each field is null (meaning "no local edit yet, show the loaded value")
   // until the user actually types in it — computed during render instead of
   // synced from `me` via an effect.
@@ -19,10 +21,13 @@ export default function SettingsPage() {
   const phone = phoneOverride ?? me?.phone_number ?? "";
   const radiusKm = radiusOverride ?? me?.default_radius_km ?? 5;
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
+
+  useEffect(() => {
+    if (authError) showToast(authError, "error");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authError]);
 
   useEffect(() => {
     (async () => {
@@ -39,8 +44,6 @@ export default function SettingsPage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    setNotice(null);
     setSaving(true);
     try {
       await api.updateProfile({
@@ -48,27 +51,28 @@ export default function SettingsPage() {
         phone_number: phone || undefined,
         default_radius_km: radiusKm,
       });
-      setNotice("Saved.");
+      showToast("Settings saved.", "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      showToast(err instanceof Error ? err.message : String(err), "error");
     } finally {
       setSaving(false);
     }
   }
 
   async function handleTogglePush() {
-    setError(null);
     setPushBusy(true);
     try {
       if (pushEnabled) {
         await unsubscribeFromPush();
         setPushEnabled(false);
+        showToast("Push alerts disabled.", "success");
       } else {
         await subscribeToPush();
         setPushEnabled(true);
+        showToast("Push alerts enabled.", "success");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      showToast(err instanceof Error ? err.message : String(err), "error");
     } finally {
       setPushBusy(false);
     }
@@ -83,9 +87,6 @@ export default function SettingsPage() {
       <main className="page">
         <div className="card card-wide stack">
           <h1>Settings</h1>
-
-          {(error || authError) && <p className="alert">{error ?? authError}</p>}
-          {notice && <p className="meta">{notice}</p>}
 
           <form onSubmit={handleSave} className="stack">
             <label>

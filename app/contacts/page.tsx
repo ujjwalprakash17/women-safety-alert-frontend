@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, type TrustedContact } from "@/lib/api";
 import { useAuthedUser } from "@/lib/useAuthedUser";
+import { useToast } from "@/components/ToastProvider";
 import Topbar from "@/components/Topbar";
 import BottomNav from "@/components/BottomNav";
 import PageLoading from "@/components/PageLoading";
@@ -11,24 +12,29 @@ const MAX_CONTACTS = 5;
 
 export default function ContactsPage() {
   const { me, loading: authLoading, error: authError } = useAuthedUser();
+  const { showToast } = useToast();
   const [contacts, setContacts] = useState<TrustedContact[] | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [relationship, setRelationship] = useState("");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authError) showToast(authError, "error");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authError]);
 
   useEffect(() => {
     if (authLoading) return;
     api
       .listContacts()
       .then(setContacts)
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+      .catch((err) => showToast(err instanceof Error ? err.message : String(err), "error"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading]);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     setSaving(true);
     try {
       const created = await api.addContact({
@@ -40,20 +46,21 @@ export default function ContactsPage() {
       setName("");
       setPhone("");
       setRelationship("");
+      showToast(`${created.name} added.`, "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      showToast(err instanceof Error ? err.message : String(err), "error");
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    setError(null);
     try {
       await api.deleteContact(id);
       setContacts((prev) => (prev ?? []).filter((c) => c.id !== id));
+      showToast("Contact removed.", "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      showToast(err instanceof Error ? err.message : String(err), "error");
     }
   }
 
@@ -74,8 +81,6 @@ export default function ContactsPage() {
               manages who&apos;s on the list.
             </p>
           </div>
-
-          {(error || authError) && <p className="alert">{error ?? authError}</p>}
 
           {contacts.length === 0 && (
             <p className="meta">No trusted contacts yet — add your first one below.</p>

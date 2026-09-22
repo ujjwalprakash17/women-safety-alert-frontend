@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useToast } from "@/components/ToastProvider";
 import ShieldIcon from "@/components/ShieldIcon";
 import PageLoading from "@/components/PageLoading";
 
@@ -12,12 +13,11 @@ type Mode = "signin" | "signup" | "forgot";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [status, setStatus] = useState<Status>("checking");
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -39,28 +39,25 @@ export default function LoginPage() {
   }, []);
 
   async function handleGoogleSignIn() {
-    setError(null);
     setStatus("redirecting");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/login` },
     });
     if (error) {
-      setError(error.message);
+      showToast(error.message, "error");
       setStatus("idle");
     }
   }
 
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    setNotice(null);
     setStatus("submitting");
 
     if (mode === "signin") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        setError(error.message);
+        showToast(error.message, "error");
         setStatus("idle");
       }
       // On success, the auth-state listener above redirects to /dashboard.
@@ -71,11 +68,11 @@ export default function LoginPage() {
         options: { emailRedirectTo: `${window.location.origin}/login` },
       });
       if (error) {
-        setError(error.message);
+        showToast(error.message, "error");
         setStatus("idle");
       } else if (!data.session) {
         // Email confirmation is required before a session is issued.
-        setNotice("Account created — check your email to confirm it before signing in.");
+        showToast("Account created — check your email to confirm it before signing in.", "success");
         setStatus("idle");
       }
       // If a session came back immediately (confirmation disabled), the
@@ -86,17 +83,15 @@ export default function LoginPage() {
       });
       setStatus("idle");
       if (error) {
-        setError(error.message);
+        showToast(error.message, "error");
       } else {
-        setNotice("If that email has an account, a reset link has been sent.");
+        showToast("If that email has an account, a reset link has been sent.", "success");
       }
     }
   }
 
   function switchMode(next: Mode) {
     setMode(next);
-    setError(null);
-    setNotice(null);
   }
 
   if (status === "checking") return <PageLoading />;
@@ -164,9 +159,6 @@ export default function LoginPage() {
                   : "Send reset link"}
           </button>
         </form>
-
-        {error && <p className="alert">{error}</p>}
-        {notice && <p className="meta">{notice}</p>}
 
         <div className="stack stack-tight">
           {mode === "signin" && (

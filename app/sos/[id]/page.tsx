@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { api, type SosSession } from "@/lib/api";
 import { useSosLive } from "@/lib/useSosLive";
 import { useAuthedUser } from "@/lib/useAuthedUser";
+import { useToast } from "@/components/ToastProvider";
 import Topbar from "@/components/Topbar";
 import BottomNav from "@/components/BottomNav";
 import PageLoading from "@/components/PageLoading";
@@ -14,20 +15,28 @@ export default function WatchSosPage() {
   const id = params.id as string;
 
   const { me, loading: authLoading, error: authError } = useAuthedUser();
+  const { showToast } = useToast();
   const [session, setSession] = useState<SosSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  useEffect(() => {
+    if (authError) showToast(authError, "error");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authError]);
 
   useEffect(() => {
     (async () => {
       try {
         setSession(await api.getSos(id));
       } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+        showToast(err instanceof Error ? err.message : String(err), "error");
+        setLoadFailed(true);
       } finally {
         setLoading(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const isActive = session?.status === "active";
@@ -49,9 +58,9 @@ export default function WatchSosPage() {
 
       <main className="page">
         <div className="card card-wide stack">
-          {(error || authError) && <p className="alert">{error ?? authError}</p>}
-
-          {!error && session && (
+          {loadFailed || !session ? (
+            <p className="meta">This alert couldn&apos;t be loaded — it may not exist anymore.</p>
+          ) : (
             <>
               <div className="spread">
                 <h1>{session.display_name ?? "Watching alert"}</h1>

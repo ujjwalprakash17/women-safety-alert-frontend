@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, getCurrentPosition, type NearbySosSession } from "@/lib/api";
 import { useAuthedUser } from "@/lib/useAuthedUser";
+import { useToast } from "@/components/ToastProvider";
 import Topbar from "@/components/Topbar";
 import BottomNav from "@/components/BottomNav";
 import PageLoading from "@/components/PageLoading";
@@ -18,6 +19,7 @@ function formatDistance(meters: number): string {
 
 export default function NearbyPage() {
   const { me, loading: authLoading, error: authError } = useAuthedUser();
+  const { showToast } = useToast();
   const [sessions, setSessions] = useState<NearbySosSession[] | null>(null);
   // null until the user explicitly picks one — falls back to their saved
   // Settings preference (once `me` loads) rather than a hardcoded default.
@@ -26,10 +28,13 @@ export default function NearbyPage() {
   const maxRadiusKm = maxRadiusOverride ?? me?.default_radius_km ?? FALLBACK_RADIUS_KM;
   const [usedRadiusKm, setUsedRadiusKm] = useState<number | null>(null);
   const [searching, setSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authError) showToast(authError, "error");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authError]);
 
   async function handleSearch(ceiling = maxRadiusKm) {
-    setError(null);
     setSearching(true);
     try {
       const position = await getCurrentPosition();
@@ -52,7 +57,7 @@ export default function NearbyPage() {
       setSessions(results);
       setUsedRadiusKm(radiusUsed);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      showToast(err instanceof Error ? err.message : String(err), "error");
     } finally {
       setSearching(false);
     }
@@ -85,8 +90,6 @@ export default function NearbyPage() {
               <option value={20}>Up to 20 km</option>
             </select>
           </div>
-
-          {(error || authError) && <p className="alert">{error ?? authError}</p>}
 
           <button
             type="button"

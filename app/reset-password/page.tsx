@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { useToast } from "@/components/ToastProvider";
 import ShieldIcon from "@/components/ShieldIcon";
 import PageLoading from "@/components/PageLoading";
 
@@ -10,9 +11,9 @@ type Status = "checking" | "ready" | "no-session" | "submitting" | "done";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [status, setStatus] = useState<Status>("checking");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Supabase's reset-link redirect creates a temporary recovery session —
@@ -24,11 +25,10 @@ export default function ResetPasswordPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     setStatus("submitting");
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
-      setError(error.message);
+      showToast(error.message, "error");
       setStatus("ready");
       return;
     }
@@ -81,7 +81,6 @@ export default function ResetPasswordPage() {
                 {status === "submitting" ? "Updating..." : "Update password"}
               </button>
             </form>
-            {error && <p className="alert">{error}</p>}
           </>
         )}
       </div>

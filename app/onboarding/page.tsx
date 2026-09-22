@@ -5,17 +5,23 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuthedUser } from "@/lib/useAuthedUser";
+import { useToast } from "@/components/ToastProvider";
 import PageLoading from "@/components/PageLoading";
 import ShieldIcon from "@/components/ShieldIcon";
 
 export default function OnboardingPage() {
   const router = useRouter();
   const { me, loading: authLoading, error: authError } = useAuthedUser();
+  const { showToast } = useToast();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [consent, setConsent] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authError) showToast(authError, "error");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authError]);
 
   // Already fully onboarded but landed here anyway (e.g. back button) —
   // send them on, nothing to do here.
@@ -27,9 +33,8 @@ export default function OnboardingPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     if (!consent) {
-      setError("Please confirm you understand and agree before continuing.");
+      showToast("Please confirm you understand and agree before continuing.", "error");
       return;
     }
     setSaving(true);
@@ -41,7 +46,7 @@ export default function OnboardingPage() {
       });
       router.replace("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      showToast(err instanceof Error ? err.message : String(err), "error");
       setSaving(false);
     }
   }
@@ -60,8 +65,6 @@ export default function OnboardingPage() {
             <p>This is what nearby responders and trusted contacts will see.</p>
           </div>
         </div>
-
-        {(error || authError) && <p className="alert">{error ?? authError}</p>}
 
         <form onSubmit={handleSubmit} className="stack">
           <label>

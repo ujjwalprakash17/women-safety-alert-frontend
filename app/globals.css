@@ -570,33 +570,72 @@ pre {
 /* ---- SOS trigger ---- */
 
 .sos-button {
-  width: clamp(140px, 40vw, 176px);
-  height: clamp(140px, 40vw, 176px);
+  width: clamp(150px, 42vw, 192px);
+  height: clamp(150px, 42vw, 192px);
   border-radius: 50%;
   border: none;
-  background: var(--sos);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: radial-gradient(
+    circle at 32% 28%,
+    var(--sos-hover) 0%,
+    var(--sos) 65%
+  );
   color: var(--sos-foreground);
-  font-size: 20px;
+  font-size: 26px;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
   cursor: pointer;
-  box-shadow: 0 0 0 8px color-mix(in srgb, var(--sos) 12%, transparent),
-    var(--shadow);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  box-shadow:
+    inset 0 2px 6px rgba(255, 255, 255, 0.25),
+    inset 0 -6px 14px rgba(0, 0, 0, 0.18),
+    0 10px 24px color-mix(in srgb, var(--sos) 45%, transparent);
+  animation: sos-breathe 2.6s ease-in-out infinite;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.sos-button-hint {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  opacity: 0.85;
+}
+
+@keyframes sos-breathe {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 2px 6px rgba(255, 255, 255, 0.25),
+      inset 0 -6px 14px rgba(0, 0, 0, 0.18),
+      0 0 0 0 color-mix(in srgb, var(--sos) 35%, transparent),
+      0 10px 24px color-mix(in srgb, var(--sos) 45%, transparent);
+  }
+  50% {
+    box-shadow:
+      inset 0 2px 6px rgba(255, 255, 255, 0.25),
+      inset 0 -6px 14px rgba(0, 0, 0, 0.18),
+      0 0 0 14px color-mix(in srgb, var(--sos) 0%, transparent),
+      0 10px 24px color-mix(in srgb, var(--sos) 45%, transparent);
+  }
 }
 
 .sos-button:not(:disabled):hover {
-  background: var(--sos-hover);
   transform: scale(1.03);
 }
 
 .sos-button:not(:disabled):active {
-  transform: scale(0.98);
+  transform: scale(0.96);
+  animation-play-state: paused;
 }
 
 .sos-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  animation: none;
 }
 
 /* ---- badges ---- */
@@ -697,4 +736,103 @@ a.list-item:hover {
 .prose p {
   color: var(--foreground);
   margin-bottom: 16px;
+}
+
+/* ---- toast notifications (Android-snackbar style) ---- */
+
+.toast-stack {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(16px + var(--safe-bottom));
+  z-index: 100;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  .toast-stack {
+    bottom: calc(var(--nav-height) + var(--safe-bottom) + 12px);
+  }
+}
+
+@media (min-width: 480px) {
+  .toast-stack {
+    left: auto;
+    right: 20px;
+    width: 360px;
+  }
+}
+
+.toast {
+  pointer-events: auto;
+  width: 100%;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--muted);
+  border-radius: 10px;
+  padding: 13px 16px;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  animation: toast-in 0.22s ease-out;
+}
+
+.toast-error {
+  border-left-color: var(--danger-fg);
+}
+
+.toast-success {
+  border-left-color: var(--success-fg);
+}
+
+.toast-info {
+  border-left-color: var(--primary);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---- PWA install banner ---- */
+
+.install-banner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + var(--safe-bottom));
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow-lg);
+  animation: toast-in 0.25s ease-out;
+}
+
+@media (max-width: 720px) {
+  .install-banner {
+    bottom: calc(var(--nav-height) + var(--safe-bottom) + 12px);
+  }
+}
+
+.install-banner-text p {
+  margin-top: 2px;
 }
