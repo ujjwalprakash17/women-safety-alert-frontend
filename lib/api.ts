@@ -28,14 +28,24 @@ async function authedFetch(path: string, options: RequestInit = {}) {
   const token = data.session?.access_token;
   if (!token) throw new Error("Not authenticated");
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      ...options.headers,
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+  } catch {
+    // fetch() itself throwing (as opposed to an HTTP error response) means
+    // the request never reached the server at all — no connectivity, the
+    // backend is unreachable, or a blocked cross-origin response. The raw
+    // browser message ("Failed to fetch" / "NetworkError...") is accurate
+    // but not actionable, so surface something a user can actually act on.
+    throw new Error("Can't reach the server. Check your connection and try again.");
+  }
 
   if (!res.ok) {
     throw new Error(await extractErrorMessage(res));
