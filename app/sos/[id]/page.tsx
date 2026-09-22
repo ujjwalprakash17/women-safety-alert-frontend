@@ -54,7 +54,7 @@ export default function WatchSosPage() {
           {!error && session && (
             <>
               <div className="spread">
-                <h1>{resolved ? "Alert resolved" : "Watching alert"}</h1>
+                <h1>{session.display_name ?? "Watching alert"}</h1>
                 <span className={`badge ${resolved ? "badge-resolved" : "badge-active"}`}>
                   {resolved ? "Resolved" : "Live"}
                 </span>
@@ -64,6 +64,9 @@ export default function WatchSosPage() {
                 <p className="meta">This alert has been resolved — nothing more to watch here.</p>
               ) : (
                 <>
+                  {session.phone_number && (
+                    <p className="meta">{session.phone_number}</p>
+                  )}
                   <p className="meta">
                     Location: {displayLat?.toFixed(5)}, {displayLng?.toFixed(5)}
                   </p>
@@ -79,16 +82,23 @@ export default function WatchSosPage() {
                     Triggered {new Date(session.created_at).toLocaleTimeString()}
                   </p>
 
-                  {mapsUrl && (
-                    <a
-                      href={mapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-primary"
-                    >
-                      Navigate
-                    </a>
-                  )}
+                  <div className="row">
+                    {mapsUrl && (
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-primary"
+                      >
+                        Navigate
+                      </a>
+                    )}
+                    {session.phone_number && (
+                      <a href={`tel:${session.phone_number}`} className="btn btn-outline">
+                        Call
+                      </a>
+                    )}
+                  </div>
                 </>
               )}
             </>

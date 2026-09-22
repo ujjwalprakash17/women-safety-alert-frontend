@@ -62,11 +62,18 @@ export default function Topbar({ me }: { me: Me | null }) {
         </button>
 
         {menuOpen && (
-          <div className="account-dropdown">
+          <div className="account-dropdown stack stack-tight">
             <div className="account-dropdown-email">
               {me?.display_name && <strong>{me.display_name}</strong>}
               <p className="meta">{me?.email}</p>
             </div>
+            <Link
+              href="/settings"
+              className="btn btn-ghost"
+              onClick={() => setMenuOpen(false)}
+            >
+              Settings
+            </Link>
             <button type="button" className="btn btn-ghost" onClick={handleSignOut}>
               Sign out
             </button>

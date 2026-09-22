@@ -9,6 +9,7 @@ import BottomNav from "@/components/BottomNav";
 import PageLoading from "@/components/PageLoading";
 
 const RADIUS_STEPS = [5, 10, 20];
+const FALLBACK_RADIUS_KM = 20;
 
 function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)} m away`;
@@ -18,7 +19,11 @@ function formatDistance(meters: number): string {
 export default function NearbyPage() {
   const { me, loading: authLoading, error: authError } = useAuthedUser();
   const [sessions, setSessions] = useState<NearbySosSession[] | null>(null);
-  const [maxRadiusKm, setMaxRadiusKm] = useState(20);
+  // null until the user explicitly picks one — falls back to their saved
+  // Settings preference (once `me` loads) rather than a hardcoded default.
+  // Computed directly during render instead of synced via an effect.
+  const [maxRadiusOverride, setMaxRadiusOverride] = useState<number | null>(null);
+  const maxRadiusKm = maxRadiusOverride ?? me?.default_radius_km ?? FALLBACK_RADIUS_KM;
   const [usedRadiusKm, setUsedRadiusKm] = useState<number | null>(null);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +59,7 @@ export default function NearbyPage() {
   }
 
   function handleMaxRadiusChange(value: number) {
-    setMaxRadiusKm(value);
+    setMaxRadiusOverride(value);
     if (sessions !== null) handleSearch(value);
   }
 
@@ -110,12 +115,15 @@ export default function NearbyPage() {
               {sessions.map((s) => (
                 <Link key={s.id} href={`/sos/${s.id}`} className="list-item stack">
                   <div className="spread">
+                    <strong>{s.display_name ?? "Someone nearby"}</strong>
                     <span className="badge badge-active">Live</span>
+                  </div>
+                  <div className="spread">
+                    <p className="meta">
+                      Triggered {new Date(s.created_at).toLocaleTimeString()}
+                    </p>
                     <span className="meta">{formatDistance(s.distance_meters)}</span>
                   </div>
-                  <p className="meta">
-                    Triggered {new Date(s.created_at).toLocaleTimeString()}
-                  </p>
                 </Link>
               ))}
             </div>

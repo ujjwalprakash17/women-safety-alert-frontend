@@ -55,6 +55,8 @@ export interface SosSession {
   outcome: SosOutcome | null;
   lat: number;
   lng: number;
+  display_name: string | null;
+  phone_number: string | null;
   created_at: string;
   updated_at: string;
   resolved_at: string | null;
@@ -79,6 +81,7 @@ export interface Me {
   email: string | null;
   display_name: string | null;
   consent_accepted_at: string | null;
+  default_radius_km: number;
   is_banned: boolean;
   ban_reason: string | null;
   created_at: string;
@@ -90,7 +93,8 @@ export const api = {
   updateProfile: (profile: {
     display_name: string;
     phone_number?: string;
-    accept_consent: boolean;
+    default_radius_km?: number;
+    accept_consent?: boolean;
   }): Promise<Me> => authedFetch("/me", { method: "PATCH", body: JSON.stringify(profile) }),
 
   triggerSos: (lat: number, lng: number): Promise<SosSession> =>
@@ -124,6 +128,11 @@ export const api = {
     auth: string;
   }): Promise<{ id: string; endpoint: string }> =>
     authedFetch("/push/subscribe", { method: "POST", body: JSON.stringify(sub) }),
+
+  unsubscribePush: (endpoint: string): Promise<void> =>
+    authedFetch(`/push/subscribe?endpoint=${encodeURIComponent(endpoint)}`, {
+      method: "DELETE",
+    }),
 
   listContacts: (): Promise<TrustedContact[]> => authedFetch("/contacts"),
 
@@ -189,4 +198,16 @@ export async function subscribeToPush(): Promise<void> {
     p256dh: json.keys!.p256dh!,
     auth: json.keys!.auth!,
   });
+}
+
+/** Reverses subscribeToPush — unsubscribes this browser and removes the
+ * server-side record so it stops receiving alerts. */
+export async function unsubscribeFromPush(): Promise<void> {
+  const registration = await navigator.serviceWorker.ready;
+  const subscription = await registration.pushManager.getSubscription();
+  if (!subscription) return;
+
+  const endpoint = subscription.endpoint;
+  await subscription.unsubscribe();
+  await api.unsubscribePush(endpoint);
 }
