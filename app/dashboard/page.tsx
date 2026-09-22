@@ -125,6 +125,29 @@ export default function DashboardPage() {
 
   if (loading) return <PageLoading />;
 
+  if (me?.is_banned) {
+    return (
+      <>
+        <Topbar me={me} />
+        <main className="page">
+          <div className="card stack stack-center">
+            <h1>Account suspended</h1>
+            <p>
+              {me.ban_reason ?? "Your account has been suspended for repeated false alerts."}
+            </p>
+            <p className="meta">
+              To appeal, contact{" "}
+              <a href="mailto:ujjwalprakash144@gmail.com" className="link">
+                ujjwalprakash144@gmail.com
+              </a>
+              .
+            </p>
+          </div>
+        </main>
+      </>
+    );
+  }
+
   const displayLat = live.lat ?? session?.lat;
   const displayLng = live.lng ?? session?.lng;
 

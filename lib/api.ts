@@ -79,6 +79,8 @@ export interface Me {
   email: string | null;
   display_name: string | null;
   consent_accepted_at: string | null;
+  is_banned: boolean;
+  ban_reason: string | null;
   created_at: string;
 }
 
