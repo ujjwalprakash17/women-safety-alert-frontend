@@ -2,21 +2,32 @@
 
 import { useEffect, useState } from "react";
 import { api, type TrustedContact } from "@/lib/api";
+import { isValidIndianMobile } from "@/lib/phone";
 import { useAuthedUser } from "@/lib/useAuthedUser";
 import { useToast } from "@/components/ToastProvider";
+import PhoneInput from "@/components/PhoneInput";
 import Topbar from "@/components/Topbar";
 import BottomNav from "@/components/BottomNav";
 import PageLoading from "@/components/PageLoading";
 
 const MAX_CONTACTS = 5;
+const NAME_MAX = 60;
+const RELATIONSHIP_MAX = 30;
+
+interface FormErrors {
+  name?: string;
+  phone?: string;
+}
 
 export default function ContactsPage() {
   const { me, loading: authLoading, error: authError } = useAuthedUser();
   const { showToast } = useToast();
   const [contacts, setContacts] = useState<TrustedContact[] | null>(null);
+  const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [relationship, setRelationship] = useState("");
+  const [errors, setErrors] = useState<FormErrors>({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -33,19 +44,43 @@ export default function ContactsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading]);
 
+  function resetForm() {
+    setName("");
+    setPhone("");
+    setRelationship("");
+    setErrors({});
+  }
+
+  function validate(): FormErrors {
+    const next: FormErrors = {};
+    const trimmedName = name.trim();
+    if (trimmedName.length < 2) {
+      next.name = "Enter at least 2 characters.";
+    } else if (trimmedName.length > NAME_MAX) {
+      next.name = `Keep it under ${NAME_MAX} characters.`;
+    }
+    if (!isValidIndianMobile(phone)) {
+      next.phone = "Enter a valid 10-digit mobile number.";
+    }
+    return next;
+  }
+
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
+    const validationErrors = validate();
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+
     setSaving(true);
     try {
       const created = await api.addContact({
-        name,
+        name: name.trim(),
         phone_number: phone,
-        relationship_label: relationship || undefined,
+        relationship_label: relationship.trim() || undefined,
       });
       setContacts((prev) => [...(prev ?? []), created]);
-      setName("");
-      setPhone("");
-      setRelationship("");
+      resetForm();
+      setShowForm(false);
       showToast(`${created.name} added.`, "success");
     } catch (err) {
       showToast(err instanceof Error ? err.message : String(err), "error");
@@ -118,6 +153,14 @@ export default function ContactsPage() {
             <p className="meta">
               You&apos;ve reached the {MAX_CONTACTS}-contact limit — remove one to add another.
             </p>
+          ) : !showForm ? (
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => setShowForm(true)}
+            >
+              Add contact
+            </button>
           ) : (
             <form onSubmit={handleAdd} className="stack">
               <label>
@@ -126,19 +169,15 @@ export default function ContactsPage() {
                   className="input"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  maxLength={NAME_MAX}
                   required
                 />
+                {errors.name && <p className="field-error">{errors.name}</p>}
               </label>
               <label>
                 Phone number
-                <input
-                  className="input"
-                  type="tel"
-                  placeholder="+91XXXXXXXXXX"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                />
+                <PhoneInput value={phone} onChange={setPhone} required />
+                {errors.phone && <p className="field-error">{errors.phone}</p>}
               </label>
               <label>
                 Relationship (optional)
@@ -147,11 +186,25 @@ export default function ContactsPage() {
                   placeholder="Mother, Friend, ..."
                   value={relationship}
                   onChange={(e) => setRelationship(e.target.value)}
+                  maxLength={RELATIONSHIP_MAX}
                 />
               </label>
-              <button type="submit" className="btn btn-primary" disabled={saving}>
-                {saving ? "Adding..." : "Add contact"}
-              </button>
+              <div className="row">
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? "Adding..." : "Add contact"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => {
+                    resetForm();
+                    setShowForm(false);
+                  }}
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+              </div>
             </form>
           )}
         </div>

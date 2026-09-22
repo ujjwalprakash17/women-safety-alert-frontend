@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { api, subscribeToPush, unsubscribeFromPush } from "@/lib/api";
+import { isValidIndianMobile } from "@/lib/phone";
 import { useAuthedUser } from "@/lib/useAuthedUser";
 import { useToast } from "@/components/ToastProvider";
+import PhoneInput from "@/components/PhoneInput";
 import Topbar from "@/components/Topbar";
 import BottomNav from "@/components/BottomNav";
 import PageLoading from "@/components/PageLoading";
@@ -44,6 +46,10 @@ export default function SettingsPage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    if (phone && !isValidIndianMobile(phone)) {
+      showToast("Enter a valid 10-digit mobile number, or leave it blank.", "error");
+      return;
+    }
     setSaving(true);
     try {
       await api.updateProfile({
@@ -100,13 +106,7 @@ export default function SettingsPage() {
             </label>
             <label>
               Phone number
-              <input
-                className="input"
-                type="tel"
-                placeholder="+91XXXXXXXXXX"
-                value={phone}
-                onChange={(e) => setPhoneOverride(e.target.value)}
-              />
+              <PhoneInput value={phone} onChange={setPhoneOverride} />
             </label>
             <label>
               Default nearby-search radius

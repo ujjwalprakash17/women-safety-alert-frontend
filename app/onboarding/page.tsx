@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { isValidIndianMobile } from "@/lib/phone";
 import { useAuthedUser } from "@/lib/useAuthedUser";
 import { useToast } from "@/components/ToastProvider";
 import PageLoading from "@/components/PageLoading";
+import PhoneInput from "@/components/PhoneInput";
 import ShieldIcon from "@/components/ShieldIcon";
 
 export default function OnboardingPage() {
@@ -35,6 +37,10 @@ export default function OnboardingPage() {
     e.preventDefault();
     if (!consent) {
       showToast("Please confirm you understand and agree before continuing.", "error");
+      return;
+    }
+    if (phone && !isValidIndianMobile(phone)) {
+      showToast("Enter a valid 10-digit mobile number, or leave it blank.", "error");
       return;
     }
     setSaving(true);
@@ -78,13 +84,7 @@ export default function OnboardingPage() {
           </label>
           <label>
             Phone number (optional)
-            <input
-              className="input"
-              type="tel"
-              placeholder="+91XXXXXXXXXX"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
+            <PhoneInput value={phone} onChange={setPhone} />
           </label>
 
           <label className="row row-top">

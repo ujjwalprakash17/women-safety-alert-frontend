@@ -33,15 +33,23 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+
+  // Deep-link into the specific alert (name, phone, live location, Navigate)
+  // instead of always landing on the dashboard — the session id was already
+  // being attached to the notification's data and just never used.
+  const sessionId = event.notification.data && event.notification.data.sessionId;
+  const targetPath = sessionId ? `/sos/${sessionId}` : "/dashboard";
+
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-      for (const client of clients) {
-        if (client.url.includes("/dashboard") && "focus" in client) {
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientsList) => {
+      for (const client of clientsList) {
+        if ("focus" in client) {
+          if ("navigate" in client) client.navigate(targetPath);
           return client.focus();
         }
       }
       if (self.clients.openWindow) {
-        return self.clients.openWindow("/dashboard");
+        return self.clients.openWindow(targetPath);
       }
     })
   );
