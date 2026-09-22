@@ -3,6 +3,26 @@ import { supabase } from "./supabaseClient";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
+/** FastAPI errors come back as {"detail": "..."} or, for validation errors,
+ * {"detail": [{"msg": "...", ...}, ...]} — extract the human-readable part
+ * instead of surfacing "409 Conflict: {"detail":"..."}" verbatim in the UI. */
+async function extractErrorMessage(res: Response): Promise<string> {
+  const text = await res.text().catch(() => "");
+  if (!text) return `Something went wrong (${res.status}).`;
+
+  try {
+    const parsed = JSON.parse(text);
+    const detail = parsed?.detail;
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail)) {
+      return detail.map((d) => d?.msg ?? JSON.stringify(d)).join(", ");
+    }
+  } catch {
+    // Not JSON — fall through to the raw text below.
+  }
+  return text;
+}
+
 async function authedFetch(path: string, options: RequestInit = {}) {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -18,8 +38,7 @@ async function authedFetch(path: string, options: RequestInit = {}) {
   });
 
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`${res.status} ${res.statusText}${body ? `: ${body}` : ""}`);
+    throw new Error(await extractErrorMessage(res));
   }
   // 204 No Content (e.g. DELETE endpoints) has no body — res.json() throws
   // on an empty string, so handle it once here instead of per-call-site.
